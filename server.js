@@ -1,41 +1,29 @@
-const express = require("express");
-const multer = require("multer");
-const cors = require("cors");
-const path = require("path");
-const fs = require("fs");
+import express from "express";
+import cors from "cors";
+
+import uploadRoutes from "./src/routes/uploadRoutes.js";
+import { uploadFolder } from "./src/config/upload.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Pasta onde as imagens serão salvas
-const uploadFolder = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadFolder)) fs.mkdirSync(uploadFolder);
-
-// Configuração do multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadFolder),
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "_" + file.originalname;
-    cb(null, uniqueName);
-  },
-});
-const upload = multer({ storage });
-
-// Endpoint de upload
-app.post("/upload", upload.single("image"), (req, res) => {
-  if (!req.file)
-    return res.status(400).json({ error: "Nenhum arquivo enviado" });
-
-  // Gera URL dinâmica para local ou produção
-  const base = process.env.PUBLIC_URL || `http://${req.headers.host}`;
-  const url = `${base}/uploads/${req.file.filename}`;
-  res.json({ url });
+app.get("/heart", (req, res) => {
+  res.send("🚀 Servidor Express Online");
 });
 
-// Servir arquivos estáticos
+// Rotas
+app.use("/", uploadRoutes);
+
+// Arquivos estáticos (uploads)
 app.use("/uploads", express.static(uploadFolder));
 
-// Porta dinâmica
+// Start local somente fora da Vercel
+const isVercel = !!process.env.VERCEL;
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`API rodando na porta ${PORT}`));
+if (!isVercel) {
+  app.listen(PORT, () => console.log(`API rodando na porta ${PORT}`));
+}
+
+// Exporta o app para a Vercel
+export default app;
